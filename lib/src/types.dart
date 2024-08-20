@@ -254,6 +254,8 @@ typedef PdfDocumentLoadFailedCallback = void Function(String error);
 
 typedef PageChangedCallback = void Function(int pageIndex);
 
+typedef AnnotationsChangedCallback = void Function(PspdfkitWidgetController controller);
+
 extension WebShowSignatureValidationStatusMode
     on ShowSignatureValidationStatusMode {
   String? get webName {

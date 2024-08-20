@@ -73,6 +73,11 @@
             
             [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(documentDidFinishRendering) name:PSPDFDocumentViewControllerDidConfigureSpreadViewNotification object:nil];
 
+            // Start listening to the annotation's change notification.
+            [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(annotationChangedNotification:) name:PSPDFAnnotationChangedNotification object:nil];
+            [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(annotationChangedNotification:) name:PSPDFAnnotationsAddedNotification object:nil];
+            [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(annotationChangedNotification:) name:PSPDFAnnotationsRemovedNotification object:nil];
+
             if ((id)configurationDictionary != NSNull.null) {
                 NSString *key = @"leftBarButtonItems";
                 if (configurationDictionary[key]) {
@@ -135,6 +140,13 @@
         _flutterPdfDocument = [[FlutterPdfDocument alloc] initWithDocument:self.pdfViewController.document messenger: _binaryMessenger];
         [_channel invokeMethod:@"onDocumentLoaded" arguments:arguments];
     }
+}
+
+- (void)annotationChangedNotification:(NSNotification *)notification {
+    NSDictionary *arguments = @{
+        @"documentId": self.pdfViewController.document.UID,
+    };
+    [_channel invokeMethod:@"onAnnotationsChanged" arguments: arguments];
 }
 
 - (void) pdfViewController:(PSPDFViewController *)pdfController willBeginDisplayingPageView:(PSPDFPageView *)pageView forPageAtIndex:(NSInteger)pageIndex {
