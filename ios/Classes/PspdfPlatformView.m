@@ -157,6 +157,22 @@
     [_channel invokeMethod:@"onPageChanged" arguments: arguments];
 }
 
+// should suppress file conflict alerts https://pspdfkit.com/guides/ios/knowledge-base/suppressing-file-coordination-alerts/
+// ...but seems to be not working
+- (BOOL)resolutionManager:(PSPDFConflictResolutionManager *)manager shouldPerformAutomaticResolutionForForDocument:(PSPDFDocument *)document dataProvider:(id<PSPDFCoordinatedFileDataProviding>)dataProvider conflictType:(PSPDFFileConflictType)type 
+               resolution:(inout PSPDFFileConflictResolution *)resolution {
+    switch (type) {
+        case PSPDFFileConflictTypeDeletion:
+            // Unconditionally close the document — EVEN WHEN THERE ARE UNSAVED CHANGES!
+            *resolution = PSPDFFileConflictResolutionClose;
+            return YES;
+        case PSPDFFileConflictTypeModification:
+            // Unconditionally reload the document from disk — EVEN WHEN THERE ARE UNSAVED CHANGES!
+            *resolution = PSPDFFileConflictResolutionReload;
+            return YES;
+    }
+}
+
 - (void)dealloc {
     [self cleanup];
 }
