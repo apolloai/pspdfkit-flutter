@@ -174,6 +174,15 @@ class PdfConfiguration {
   /// Sets the minimum zoom scale. Defaults to null.
   final double? minimumZoomScale;
 
+  /// Sets whether to ask for the username when adding an annotation.
+  final bool askForAnnotationUsername;
+
+  /// Sets whether to show the author name in the annotation inspector.
+  final String defaultAuthorName;
+
+  /// Sets whether to allow the deletion of annotations from outline window.
+  final bool allowAnnotationDeletion;
+
   PdfConfiguration(
       {this.scrollDirection,
       this.pageTransition,
@@ -222,7 +231,10 @@ class PdfConfiguration {
       this.annotationToolsGrouping,
       this.defaultZoomScale,
       this.maximumZoomScale,
-      this.minimumZoomScale});
+      this.minimumZoomScale,
+        this.defaultAuthorName = 'unnamed',
+      this.askForAnnotationUsername = true,
+      this.allowAnnotationDeletion = true});
 
   /// Returns a [Map] representation of the [PdfConfiguration] object.
   /// This is used to pass the configuration to the platform side.
@@ -268,6 +280,9 @@ class PdfConfiguration {
       'enableMeasurementTools': enableMeasurementTools,
       'enableMeasurementToolSnapping': measurementSnappingEnabled,
       'enableMagnifier': enableMagnifier,
+      'askForAnnotationUsername': askForAnnotationUsername,
+      'defaultAuthorName': defaultAuthorName,
+      'allowAnnotationDeletion': allowAnnotationDeletion,
       'measurementValueConfigurations':
           measurementValueConfigurations?.map((e) => e.toMap()).toList(),
       'toolbarItemGrouping': convertAnnotationToolsGrouping(),

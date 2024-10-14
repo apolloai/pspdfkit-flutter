@@ -3,6 +3,7 @@ package com.pspdfkit.flutter.pspdfkit
 import android.content.Context
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import com.pspdfkit.annotations.AnnotationProvider.OnAnnotationUpdatedListener
 import com.pspdfkit.document.PdfDocument
 import com.pspdfkit.flutter.pspdfkit.document.FlutterPdfDocument
 import com.pspdfkit.flutter.pspdfkit.util.MeasurementHelper
@@ -10,15 +11,17 @@ import com.pspdfkit.listeners.DocumentListener
 import com.pspdfkit.ui.PdfFragment
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
+import com.pspdfkit.annotations.Annotation
 
 class FlutterPdfUiFragmentCallbacks(
-    private val methodChannel: MethodChannel, private val measurementConfigurations:
-    List<Map<String, Any>>?,
+    private val methodChannel: MethodChannel,
+    private val measurementConfigurations: List<Map<String, Any>>?,
     private val binaryMessenger: BinaryMessenger
 ) : FragmentManager.FragmentLifecycleCallbacks(), DocumentListener {
 
     private var pdfFragment: PdfFragment? = null
     private var flutterPdfDocument: FlutterPdfDocument? = null
+    private var annotationUpdatedListener: OnAnnotationUpdatedListener? = null
 
     override fun onFragmentAttached(
         fm: FragmentManager,
@@ -48,8 +51,31 @@ class FlutterPdfUiFragmentCallbacks(
             )
         )
 
-        flutterPdfDocument =
-            FlutterPdfDocument(document, binaryMessenger);
+        flutterPdfDocument = FlutterPdfDocument(document, binaryMessenger)
+
+        annotationUpdatedListener = object : OnAnnotationUpdatedListener {
+            override fun onAnnotationCreated(annotation: Annotation) {
+                methodChannel.invokeMethod("onAnnotationsChanged", null)
+            }
+
+            override fun onAnnotationUpdated(annotation: Annotation) {
+                methodChannel.invokeMethod("onAnnotationsChanged", null)
+            }
+
+            override fun onAnnotationRemoved(annotation: Annotation) {
+                methodChannel.invokeMethod("onAnnotationsChanged", null)
+            }
+
+            override fun onAnnotationZOrderChanged(
+                pageIndex: Int,
+                oldOrder: List<Annotation>,
+                newOrder: List<Annotation>
+            ) {
+                methodChannel.invokeMethod("onAnnotationsChanged", null)
+            }
+        }
+
+        pdfFragment?.addOnAnnotationUpdatedListener(annotationUpdatedListener!!)
     }
 
     override fun onPageChanged(document: PdfDocument, pageIndex: Int) {
@@ -80,6 +106,11 @@ class FlutterPdfUiFragmentCallbacks(
             }
             if (pdfFragment == f) {
                 pdfFragment?.removeDocumentListener(this)
+                // Remove the annotation updated listener
+                if (annotationUpdatedListener != null) {
+                    pdfFragment?.removeOnAnnotationUpdatedListener(annotationUpdatedListener!!)
+                    annotationUpdatedListener = null
+                }
                 pdfFragment = null
                 flutterPdfDocument = null
             }

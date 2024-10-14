@@ -11,12 +11,12 @@ import Foundation
 
 @objc(FlutterPdfDocument)
 public class FlutterPdfDocument: NSObject {
-    
+
     // MARK: - Properties
     var document: Document?
     var messenger: FlutterBinaryMessenger?
     var chanel: FlutterMethodChannel?
-    
+
   @objc public init(document: Document, messenger: FlutterBinaryMessenger) {
         super.init()
         self.document = document

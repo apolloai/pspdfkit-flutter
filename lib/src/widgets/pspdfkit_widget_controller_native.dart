@@ -8,6 +8,7 @@
 ///
 
 import 'package:flutter/services.dart';
+
 import '../../pspdfkit.dart';
 import '../document/pdf_document_native.dart';
 
@@ -20,6 +21,7 @@ class PspdfkitWidgetControllerNative extends PspdfkitWidgetController {
     PdfDocumentLoadedCallback? onPdfDocumentLoaded,
     PdfDocumentLoadFailedCallback? onPdfDocumentLoadFailed,
     PageChangedCallback? onPageChanged,
+    AnnotationsChangedCallback? onAnnotationsChanged,
   }) : _channel = MethodChannel('com.pspdfkit.widget.$id') {
     _channel.setMethodCallHandler((call) async {
       switch (call.method) {
@@ -34,6 +36,9 @@ class PspdfkitWidgetControllerNative extends PspdfkitWidgetController {
         case 'onPageChanged':
           var pageIndex = call.arguments['pageIndex'];
           onPageChanged?.call(pageIndex);
+          break;
+        case 'onAnnotationsChanged':
+          onAnnotationsChanged?.call(this);
           break;
       }
     });
@@ -108,7 +113,7 @@ class PspdfkitWidgetControllerNative extends PspdfkitWidgetController {
     Map<AnnotationTool, AnnotationConfiguration> configurations,
   ) async {
     await _channel
-        .invokeMethod('setAnnotationConfigurations', <String, dynamic>{
+        .invokeMethod('setAnnotationPresetConfigurations', <String, dynamic>{
       'annotationConfigurations': configurations.map((key, value) {
         return MapEntry(key.name, value.toMap());
       }),
