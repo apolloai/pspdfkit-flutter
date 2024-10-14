@@ -15,7 +15,21 @@
 @import PSPDFKit;
 @import PSPDFKitUI;
 
-@interface PspdfPlatformView() <PSPDFViewControllerDelegate>
+// Custom subclass to control swipe-to-delete based on allowAnnotationDeletion
+@interface CustomAnnotationTableViewController : PSPDFAnnotationTableViewController
+@property (nonatomic, assign) BOOL allowAnnotationDeletion;
+@end
+
+@implementation CustomAnnotationTableViewController
+
+// Override to control swipe-to-delete
+- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
+    return self.allowAnnotationDeletion; // Control editing based on the property
+}
+
+@end
+
+@interface PspdfPlatformView() <PSPDFViewControllerDelegate, PSPDFAnnotationTableViewControllerDelegate>
 @property int64_t platformViewId;
 @property (nonatomic) FlutterMethodChannel *channel;
 @property (nonatomic) FlutterMethodChannel *broadcastChannel;
@@ -24,6 +38,7 @@
 @property (nonatomic) PSPDFNavigationController *navigationController;
 @property (nonatomic) FlutterPdfDocument *flutterPdfDocument;
 @property (nonatomic) NSObject<FlutterBinaryMessenger> *binaryMessenger;
+@property (nonatomic, assign) BOOL allowAnnotationDeletion;
 @end
 
 @implementation PspdfPlatformView
@@ -59,14 +74,43 @@
            
             NSDictionary *configurationDictionary = [PspdfkitFlutterConverter processConfigurationOptionsDictionaryForPrefix:args[@"configuration"]];
             PSPDFDocument *document = [PspdfkitFlutterHelper documentFromPath:documentPath];
-            
+
+            // Extract and assign allowAnnotationDeletion
+            BOOL allowAnnotationDeletion = YES;
+            if (configurationDictionary[@"allowAnnotationDeletion"] != nil) {
+                allowAnnotationDeletion = [configurationDictionary[@"allowAnnotationDeletion"] boolValue];
+            }
+            self.allowAnnotationDeletion = allowAnnotationDeletion;
+            NSLog(@"[PSPDFKit] allowAnnotationDeletion: %@", self.allowAnnotationDeletion ? @"YES" : @"NO");
+
+
+            BOOL askForAnnotationUsername = YES;
+            if (configurationDictionary[@"askForAnnotationUsername"] != nil) {
+                askForAnnotationUsername = [configurationDictionary[@"askForAnnotationUsername"] boolValue];
+            }
+
+            if (askForAnnotationUsername == NO) {
+                document.defaultAnnotationUsername = configurationDictionary[@"defaultAuthorName"];
+            }
+
             NSArray *measurementValueConfigurations = configurationDictionary[@"measurementValueConfigurations"];
           
             [PspdfkitFlutterHelper unlockWithPasswordIfNeeded:document dictionary:configurationDictionary];
 
             BOOL isImageDocument = [PspdfkitFlutterHelper isImageDocument:documentPath];
             PSPDFConfiguration *configuration = [PspdfkitFlutterConverter configuration:configurationDictionary isImageDocument:isImageDocument];
-            _pdfViewController = [[PSPDFViewController alloc] initWithDocument:document configuration:configuration];
+
+            // Update the configuration to set 'shouldAskForAnnotationUsername'
+            PSPDFConfiguration *updatedConfiguration = [configuration configurationUpdatedWithBuilder:^(PSPDFConfigurationBuilder *builder) {
+                builder.shouldAskForAnnotationUsername = askForAnnotationUsername;
+                NSLog(@"[PSPDFKit] shouldAskForAnnotationUsername: %@", builder.shouldAskForAnnotationUsername ? @"YES" : @"NO");
+                NSLog(@"[PSPDFKit] defaultAuthorName %@", configurationDictionary[@"defaultAuthorName"]);
+
+                // Override PSPDFAnnotationTableViewController with our custom subclass
+                [builder overrideClass:[PSPDFAnnotationTableViewController class] withClass:[CustomAnnotationTableViewController class]];
+            }];
+
+            _pdfViewController = [[PSPDFViewController alloc] initWithDocument:document configuration:updatedConfiguration];
             _pdfViewController.appearanceModeManager.appearanceMode = [PspdfkitFlutterConverter appearanceMode:configurationDictionary];
             _pdfViewController.pageIndex = [PspdfkitFlutterConverter pageIndex:configurationDictionary];
             _pdfViewController.delegate = self;
@@ -125,6 +169,39 @@
     }
 
     return self;
+}
+
+// Helper method to find the annotation controller
+- (PSPDFAnnotationTableViewController *)findAnnotationControllerIn:(UIViewController *)controller {
+    if ([controller isKindOfClass:[PSPDFAnnotationTableViewController class]]) {
+        return (PSPDFAnnotationTableViewController *)controller;
+    } else if ([controller isKindOfClass:[UINavigationController class]]) {
+        return [self findAnnotationControllerIn:((UINavigationController *)controller).topViewController];
+    } else if ([controller isKindOfClass:[PSPDFContainerViewController class]]) {
+        for (UIViewController *childController in ((PSPDFContainerViewController *)controller).viewControllers) {
+            PSPDFAnnotationTableViewController *foundController = [self findAnnotationControllerIn:childController];
+            if (foundController) {
+                return foundController;
+            }
+        }
+    }
+    return nil;
+}
+
+// Implement the delegate method
+- (BOOL)pdfViewController:(PSPDFViewController *)pdfController
+     shouldShowController:(UIViewController *)controller
+                  options:(NSDictionary<NSString *, id> *)options
+        animated:(BOOL)animated {
+    PSPDFAnnotationTableViewController *annotationController = [self findAnnotationControllerIn:controller];
+    if (annotationController) {
+        if ([annotationController isKindOfClass:[CustomAnnotationTableViewController class]]) {
+            CustomAnnotationTableViewController *customController = (CustomAnnotationTableViewController *)annotationController;
+            customController.allowAnnotationDeletion = self.allowAnnotationDeletion;
+            NSLog(@"[PSPDFKit] Setting allowAnnotationDeletion to %@", self.allowAnnotationDeletion ? @"YES" : @"NO");
+        }
+    }
+    return YES;
 }
 
 - (void)documentDidFinishRendering {

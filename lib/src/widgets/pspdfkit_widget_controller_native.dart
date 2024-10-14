@@ -113,7 +113,7 @@ class PspdfkitWidgetControllerNative extends PspdfkitWidgetController {
     Map<AnnotationTool, AnnotationConfiguration> configurations,
   ) async {
     await _channel
-        .invokeMethod('setAnnotationConfigurations', <String, dynamic>{
+        .invokeMethod('setAnnotationPresetConfigurations', <String, dynamic>{
       'annotationConfigurations': configurations.map((key, value) {
         return MapEntry(key.name, value.toMap());
       }),

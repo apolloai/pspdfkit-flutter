@@ -140,6 +140,19 @@ PSPDFSettingKey const PSPDFSettingKeyHybridEnvironment = @"com.pspdfkit.hybrid-e
     }
 }
 
+- (void)setAnnotationConfigurations:(NSDictionary *)configurations {
+    if (!self.pdfViewController) {
+        NSLog(@"[PSPDFKit] pdfViewController is nil. Cannot apply annotation configurations.");
+        return;
+    }
+
+    // Convert configurations from Flutter to native PSPDFKit configurations
+    [AnnotationsPresetConfigurations setConfigurationsWithAnnotationPreset:configurations];
+
+    NSLog(@"[PSPDFKit] Applied annotation configurations.");
+}
+
+
 - (void) setupViewController:(NSDictionary *)configurationDictionary result:(FlutterResult)result  {
     
         self.pdfViewController.appearanceModeManager.appearanceMode = [PspdfkitFlutterConverter appearanceMode:configurationDictionary];
