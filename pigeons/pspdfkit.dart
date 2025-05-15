@@ -648,6 +648,7 @@ abstract class PdfDocumentApi {
   @async
   int getPageCount();
 
+  /// Add a bookmark to the document.
   @async
   bool addBookmark(String name, int pageIndex);
 }
